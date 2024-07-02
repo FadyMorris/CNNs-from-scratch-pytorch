@@ -12,9 +12,9 @@ class ResidualBlock(nn.Module):
                         nn.Sequential(
                             OrderedDict(
                                 [
-                                    ("conv", nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)),
+                                    ("conv", nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)),
                                     ("batch_norm", nn.BatchNorm2d(out_channels)),
-                                    ("relu", nn.ReLU()),
+                                    ("relu", nn.ReLU(inplace=True)),
                                 ]
                             )
                         ),
@@ -24,7 +24,7 @@ class ResidualBlock(nn.Module):
                         nn.Sequential(
                             OrderedDict(
                                 [
-                                    ("conv", nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)),
+                                    ("conv", nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)),
                                     ("batch_norm", nn.BatchNorm2d(out_channels)),
                                 ]
                             )
@@ -38,14 +38,14 @@ class ResidualBlock(nn.Module):
             self.downsample = nn.Sequential(
                 OrderedDict(
                     [
-                        ("downsample_conv", nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride)),
+                        ("downsample_conv", nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False)),
                         ("downsample_batch_norm", nn.BatchNorm2d(out_channels)),
                     ]
                 )
             )
         else:
             self.downsample = None
-        self.relu = nn.ReLU()
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
         # F(x)
@@ -61,28 +61,32 @@ class ResidualBlock(nn.Module):
         # Now we apply ReLU and return
         return self.relu(H)
 
-def get_conv_layer(in_channels, out_channels, kernel_size = 3, stride = 1, padding = 1, pool=False):
-        conv_block = nn.Sequential(
+def get_conv_layer(in_channels, out_channels, kernel_size = 3, stride = 1, padding = 1, bias=True):
+        conv_layer = nn.Sequential(
             OrderedDict(
                 [
-                ("conv", nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=padding)),
-                ("batch_norm", nn.BatchNorm2d(out_channels)),
-                ("relu", nn.ReLU()),
+                    ("conv", 
+                     nn.Conv2d(
+                         in_channels=in_channels, 
+                         out_channels=out_channels, 
+                         kernel_size=kernel_size, 
+                         stride=stride, 
+                         padding=padding, 
+                         bias=bias)
+                    ),
+                    ("batch_norm", nn.BatchNorm2d(out_channels)),
+                    ("relu", nn.ReLU()),
                 ]
             )
         )
-        conv_layer = OrderedDict([("conv_block", conv_block)])
-        
-        if pool:
-            conv_layer["max_pool"] = nn.MaxPool2d(kernel_size = 2, stride = 2)
-        return nn.Sequential(conv_layer)
+        return conv_layer 
 
 def get_fc_layer(in_channels, out_channels, dropout):
     sublayers = OrderedDict(
         [
-            ("dropout", nn.Dropout(dropout)),
             ("linear", nn.Linear(in_channels, out_channels)),
             ("relu", nn.ReLU()),
+            ("dropout", nn.Dropout(dropout)),
         ]
     )
     return nn.Sequential(sublayers)
